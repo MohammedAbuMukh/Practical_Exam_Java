@@ -1,0 +1,5 @@
+package com.axsos.log_reg.models;
+
+public class Team {
+
+}

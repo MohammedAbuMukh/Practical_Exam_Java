@@ -1,0 +1,48 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Kickball League Dashboard</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        table, th, td {
+            border: 1px solid black;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h2>Welcome, George!</h2>
+    <h2>Kickball League Dashboard</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Team Name</th>
+                <th>Skill Level (1-5)</th>
+                <th>Players</th>
+                <th>Game Day</th>
+            </tr>
+        </thead>
+        <tbody>
+            <c:forEach var="team" items="${teams}">
+                <tr>
+                    <td>${team.name}</td>
+                    <td>${team.skillLevel}</td>
+                    <td>${team.players}</td>
+                    <td>${team.gameDay}</td>
+                </tr>
+            </c:forEach>
+        </tbody>
+    </table>
+    <br>
+    <button>Create New Team</button>
+    <p><strong>STRETCH GOAL:</strong> Keep track of how many players are on each team. There should be no more than 9 players per team.</p>
+</body>
+</html>

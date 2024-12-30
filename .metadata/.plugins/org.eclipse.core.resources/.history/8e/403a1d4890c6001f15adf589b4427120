@@ -1,0 +1,5 @@
+package com.axsos.log_reg.repositories;
+
+public class TeamRepository {
+
+}

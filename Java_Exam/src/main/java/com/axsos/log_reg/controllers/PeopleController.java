@@ -1,0 +1,216 @@
+package com.axsos.log_reg.controllers;
+
+import com.axsos.log_reg.models.*;
+import com.axsos.log_reg.services.*;
+import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+
+@Controller
+public class PeopleController {
+
+    private final PeopleService peopleService;
+    private final TeamService teamService;
+
+    public PeopleController(PeopleService peopleService, TeamService teamService) {
+        this.peopleService = peopleService;
+        this.teamService = teamService;
+    }
+
+    @GetMapping("/")
+    public String index(Model model) {
+        model.addAttribute("newPeople", new People());
+        model.addAttribute("newLogin", new LoginPeople());
+        return "index";
+    }
+
+    @GetMapping("/home")
+    public String home(HttpSession session, Model model) {
+        People loggedPeople = (People) session.getAttribute("loggedPeople");
+        if (loggedPeople != null) {
+            model.addAttribute("loggedPeople", loggedPeople);
+            model.addAttribute("createdTeams", loggedPeople.getCreatedTeams());
+            return "home";
+        } else {
+            return "redirect:/";
+        }
+    }
+
+    @GetMapping("/logout")
+    public String logout(HttpSession session) {
+        session.invalidate();
+        return "redirect:/";
+    }
+
+    @PostMapping("/register")
+    public String register(
+            @Valid @ModelAttribute("newPeople") People newPeople,
+            BindingResult bindingResult,
+            Model model,
+            HttpSession session
+    ) {
+        People loggedPeople = peopleService.register(newPeople, bindingResult);
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("newLogin", new People());
+            return "index";
+        } else {
+            session.setAttribute("loggedPeople", loggedPeople);
+            return "redirect:/home";
+        }
+    }
+
+    @PostMapping("/login")
+    public String login(
+            @Valid @ModelAttribute("newLogin") LoginPeople newLogin, 
+            BindingResult bindingResult,
+            HttpSession session,
+            Model model
+    ) {
+        People loggedPeople = peopleService.login(newLogin, bindingResult); 
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("newPeople", new People());
+            return "index"; 
+        } else {
+            session.setAttribute("loggedPeople", loggedPeople); 
+            return "redirect:/home"; 
+        }
+    }
+
+    @GetMapping("/teams/new")
+    public String newTeam(Model model, HttpSession session) {
+        People loggedPeople = (People) session.getAttribute("loggedPeople");
+        if (loggedPeople == null) {
+            return "redirect:/";
+        }
+        model.addAttribute("newTeam", new Team());
+        return "newTeam";
+    }
+
+    @PostMapping("/teams")
+    public String createTeam(
+            @Valid @ModelAttribute("newTeam") Team newTeam,
+            BindingResult bindingResult,
+            HttpSession session
+    ) {
+        People loggedPeople = (People) session.getAttribute("loggedPeople");
+        if (loggedPeople == null) {
+            return "redirect:/";
+        }
+
+        if (bindingResult.hasErrors()) {
+            return "newTeam";
+        }
+
+        teamService.createTeam(newTeam, loggedPeople);
+
+        loggedPeople = peopleService.findById(loggedPeople.getId());
+        session.setAttribute("loggedPeople", loggedPeople);
+
+        return "redirect:/home";
+    }
+
+    @GetMapping("/teams/{id}")
+    public String teamDetails(@PathVariable("id") Long id, Model model, HttpSession session) {
+        People loggedPeople = (People) session.getAttribute("loggedPeople");
+        if (loggedPeople == null) {
+            return "redirect:/";
+        }
+
+        Team team = teamService.findById(id);
+        if (team == null) {
+            return "redirect:/home";
+        }
+
+        model.addAttribute("team", team);
+        model.addAttribute("newPlayer", new People());
+        return "teamDetails";
+    }
+
+    @PostMapping("/teams/{id}/players")
+    public String addPlayerToTeam(
+            @PathVariable("id") Long id,
+            @Valid @ModelAttribute("newPlayer") People newPlayer,
+            BindingResult bindingResult,
+            HttpSession session,
+            Model model
+    ) {
+        People loggedPeople = (People) session.getAttribute("loggedPeople");
+        if (loggedPeople == null) {
+            return "redirect:/";
+        }
+
+        if (bindingResult.hasErrors()) {
+            Team team = teamService.findById(id);
+            model.addAttribute("team", team);
+            return "newPlayer";
+        }
+
+        teamService.addPlayerToTeam(id, newPlayer);
+        return "redirect:/teams/" + id;
+    }
+
+    @GetMapping("/teams/{id}/edit")
+    public String editTeam(@PathVariable("id") Long id, Model model, HttpSession session) {
+        People loggedPeople = (People) session.getAttribute("loggedPeople");
+        if (loggedPeople == null) {
+            return "redirect:/";
+        }
+
+        Team team = teamService.findById(id);
+        if (team == null || !team.getCreator().getId().equals(loggedPeople.getId())) {
+            return "redirect:/home";
+        }
+
+        model.addAttribute("team", team);
+        return "editTeam";
+    }
+
+    @PostMapping("/teams/{id}/update")
+    public String updateTeam(
+            @PathVariable("id") Long id,
+            @Valid @ModelAttribute("team") Team team,
+            BindingResult bindingResult,
+            HttpSession session
+    ) {
+        People loggedPeople = (People) session.getAttribute("loggedPeople");
+        if (loggedPeople == null) {
+            return "redirect:/";
+        }
+
+        if (bindingResult.hasErrors()) {
+            return "editTeam";
+        }
+
+        teamService.updateTeam(id, team);
+
+        
+        loggedPeople = peopleService.findById(loggedPeople.getId());
+        session.setAttribute("loggedPeople", loggedPeople);
+
+        return "redirect:/teams/" + id;
+    }
+
+    @GetMapping("/teams/{id}/delete")
+    public String deleteTeam(@PathVariable("id") Long id, HttpSession session) {
+        People loggedPeople = (People) session.getAttribute("loggedPeople");
+        if (loggedPeople == null) {
+            return "redirect:/";
+        }
+
+        Team team = teamService.findById(id);
+        if (team == null || !team.getCreator().getId().equals(loggedPeople.getId())) {
+            return "redirect:/home";
+        }
+
+        teamService.deleteTeam(id);
+
+        loggedPeople = peopleService.findById(loggedPeople.getId());
+        session.setAttribute("loggedPeople", loggedPeople);
+
+        return "redirect:/home";
+    }
+
+}
